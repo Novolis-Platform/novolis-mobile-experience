@@ -3,11 +3,22 @@
   "profileId": "lenovo-tab-m10-x605f",
   "mode": "local-mirror",
   "directGithubEnabled": false,
+  "hostOnlyUpdates": true,
   "backgroundPolling": false,
+  "vpn": {
+    "requiredPackage": "com.nordvpn.android",
+    "requireInstalled": true,
+    "requireEnabled": true,
+    "requireConfigured": true,
+    "requireActiveTunnel": true,
+    "lockdownRecommended": true
+  },
   "allowedDestinations": [],
   "notes": [
     "The shell has no network permission in the first slice.",
     "A local mirror remains the preferred update path.",
+    "Direct GitHub update checks run on the provisioning host only and require explicit opt-in.",
+    "Networked approved applications require an active NordVPN tunnel before use.",
     "Network enforcement must be validated on the physical tablet before cleanup."
   ]
 }

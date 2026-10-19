@@ -2,12 +2,48 @@
   "schemaVersion": 1,
   "applications": [
     {
-      "id": "mobile-experience-shell",
-      "displayName": "Novolis Mobile Experience",
-      "packageName": "com.novolis.mobileexperience.shell",
-      "source": "built-in",
+      "id": "novolis-quiet-video",
+      "displayName": "Novolis Quiet Video",
+      "packageName": "com.novolis.quietvideo",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.QuietVideo",
+      "channel": "preview",
       "install": "managed",
-      "update": "staged",
+      "update": "automatic",
+      "launch": "android-activity"
+    },
+    {
+      "id": "novolis-reach",
+      "displayName": "Novolis Reach",
+      "packageName": "com.novolis.reach",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.Reach",
+      "channel": "stable",
+      "install": "managed",
+      "update": "automatic",
+      "launch": "android-activity"
+    },
+    {
+      "id": "novolis-sudoku",
+      "displayName": "Novolis Sudoku",
+      "packageName": "com.novolis.sudoku",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.Sudoku",
+      "channel": "preview",
+      "install": "managed",
+      "update": "automatic",
+      "launch": "android-activity"
+    },
+    {
+      "id": "merglyph",
+      "displayName": "Merglyph",
+      "packageName": "dev.novolis.merglyph",
+      "source": "merglyph",
+      "updateAppId": "Novolis.Merglyph",
+      "releaseAssetName": "Merglyph-android.apk",
+      "channel": "stable",
+      "install": "managed",
+      "update": "automatic",
       "launch": "android-activity"
     }
   ]

@@ -11,4 +11,10 @@ public sealed record MobileApplicationEntry
 
     /// <summary>Fully qualified launch activity name.</summary>
     public required string ActivityName { get; init; }
+
+    /// <summary>Whether this entry is the shell that currently owns HOME.</summary>
+    public bool IsHomeApplication { get; init; }
+
+    /// <summary>Whether the shell should render an open action for this entry.</summary>
+    public bool CanOpen => !IsHomeApplication;
 }

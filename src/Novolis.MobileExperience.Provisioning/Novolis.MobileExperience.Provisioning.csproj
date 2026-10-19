@@ -9,5 +9,8 @@
   </PropertyGroup>
   <ItemGroup>
     <LibraryReference Include="Novolis.IO.Mobile.Android" />
+    <LibraryReference Include="Novolis.Registry.GitHub" />
+    <LibraryReference Include="Novolis.Registry.Primitives" />
+    <LibraryReference Include="Novolis.Registry.Updates" />
   </ItemGroup>
 </Project>

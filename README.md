@@ -55,6 +55,18 @@ The repository-local provisioning entry point has the same safe boundary:
 dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- inventory --serial HA1417X9 --output-directory d:\novolis\novolis-mobile-experience\artifacts\inventory
 ```
 
+The read-only privacy audit records account state, approved/forbidden package
+state, active transport, always-on VPN policy, and observed connectivity
+probe hostnames without retaining addresses or Wi-Fi names:
+
+```powershell
+dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- privacy --serial HA1417X9 --output-directory d:\novolis\novolis-mobile-experience\artifacts\privacy\lenovo-tab-m10-x605f
+```
+
+The audit intentionally reports a pending state until the NordVPN account
+sign-in, Android VPN consent, and always-on/lockdown choices are completed on
+the tablet. Installing NordVPN is not evidence of an active tunnel.
+
 ## Audited cleanup
 
 Cleanup is preview-only unless both `--apply` and `--yes` are supplied. The
@@ -83,6 +95,78 @@ before/after inventories before applying the package operations:
 ```powershell
 dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- cleanup --profile d:\novolis\novolis-mobile-experience\devices\lenovo-tab-m10-x605f\packages.json --serial HA1417X9 --output-directory d:\novolis\novolis-mobile-experience\artifacts\cleanup\lenovo-tab-m10-x605f --apply --yes
 ```
+
+## Approved Novolis updates
+
+Release checks run on the Windows provisioning host. The Android shell has no
+network permission and does not contact GitHub. The default is the privacy
+preserving local-mirror policy:
+
+```powershell
+dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- updates check --serial HA1417X9 --catalog-directory d:\novolis\novolis-mobile-experience\catalog --output-directory d:\novolis\novolis-mobile-experience\artifacts\updates\lenovo-tab-m10-x605f
+```
+
+An explicit host-only GitHub check is available when a mirror is not being
+used. It never grants the tablet network access:
+
+```powershell
+dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- updates check --direct-github --include-not-installed --serial HA1417X9 --catalog-directory d:\novolis\novolis-mobile-experience\catalog --output-directory d:\novolis\novolis-mobile-experience\artifacts\updates\lenovo-tab-m10-x605f
+```
+
+Installation requires selecting one approved application, explicit direct
+GitHub access, and confirmation. The release SHA-256, exact package name,
+device ABI, and locally pinned APK signing certificate are verified before
+ADB installation:
+
+```powershell
+dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- updates apply --application merglyph --direct-github --serial HA1417X9 --catalog-directory d:\novolis\novolis-mobile-experience\catalog --output-directory d:\novolis\novolis-mobile-experience\artifacts\updates\lenovo-tab-m10-x605f --yes
+```
+
+No APK is installed while its signing identity is unpinned. The Merglyph
+release is a legacy asset-only release without `Novolis.Update.json`; its exact
+APK basename, GitHub digest, package id, ABI, and signing certificate are
+still checked before installation.
+
+The release-backed catalog currently contains every Android APK published by
+the Novolis organization release feeds: Novolis Reach, Novolis Sudoku, Novolis
+Quiet Video, and Merglyph. They are all marked for automatic maintenance,
+including installation when they are absent:
+
+```powershell
+dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- updates maintain --direct-github --serial HA1417X9 --catalog-directory d:\novolis\novolis-mobile-experience\catalog --output-directory d:\novolis\novolis-mobile-experience\artifacts\updates\lenovo-tab-m10-x605f --yes
+```
+
+Maintenance is host-only and must be run by a connected host or an approved
+host scheduler. It never grants the Android shell network access. Each APK is
+downloaded from a GitHub release asset, checked against the release SHA-256,
+package id, device ABI, and pinned signing certificate, then installed only
+after all checks pass. The shell itself remains staged until it has a
+release-backed Android asset.
+
+The historical Merglyph release feed is private and asset-only. Its host-side
+check uses the current user's authenticated GitHub CLI session, or
+`GH_TOKEN`/`GITHUB_TOKEN`; no GitHub credential is ever copied to the tablet.
+
+To register a daily host-side maintenance window for the connected tablet:
+
+```powershell
+pwsh -File d:\novolis\novolis-mobile-experience\scripts\Register-MobileExperienceMaintenance.ps1 -RepositoryRoot d:\novolis\novolis-mobile-experience -Serial HA1417X9 -At 03:00
+```
+
+The scheduled action runs without a visible console window, uses direct GitHub
+only on the host, and does nothing when the tablet is not available. Remove it
+with the same script and `-Unregister`.
+
+NordVPN is handled as a separately trusted vendor application. The official
+NordVPN sideload endpoint currently serves version `6.7.3+sideload`; the
+tablet's installed APK has the same package, version, SHA-256
+(`2784D46A3827A5C21FCB92C3ECF1A2FBCB71EC4D00529FDAACD646BDD341CAD9`), and
+vendor signing certificate
+(`BC64AE0725AF656B3B10B684CD1DF4C9D6B7F81BC5DC32DF3A3B2CE94CE61466`) as
+that official download. NordVPN's release notes advertise a newer Play
+distribution, but this profile does not introduce Google Play or install a
+third-party mirror. The next safe update is therefore blocked until Nord
+publishes the newer build through its official sideload channel.
 
 ## Scope boundaries
 

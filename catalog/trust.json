@@ -2,10 +2,44 @@
   "schemaVersion": 1,
   "trustedApplications": [
     {
-      "id": "mobile-experience-shell",
-      "packageName": "com.novolis.mobileexperience.shell",
-      "signingCertificateSha256": [],
-      "status": "pending-release-signing"
+      "id": "novolis-quiet-video",
+      "packageName": "com.novolis.quietvideo",
+      "signingCertificateSha256": [
+        "AFC15021E35CB7454303245AEF7E615B9388B9CFE16BC33818D9DCCFCD1EEBA5"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "novolis-reach",
+      "packageName": "com.novolis.reach",
+      "signingCertificateSha256": [
+        "CCB9B53135E060CA9EC504AAF6146FF2EA307B347C2B61091DE4275886969E6B"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "novolis-sudoku",
+      "packageName": "com.novolis.sudoku",
+      "signingCertificateSha256": [
+        "4BFFAA6D3456700E2E1B93269F61FD153BABF3DFA45A3891336309594CA31FFA"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "merglyph",
+      "packageName": "dev.novolis.merglyph",
+      "signingCertificateSha256": [
+        "05240A0414B6C79E5B6BD9B1425C30EAEFEFFACD82734BC3F637AA099361C62D"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "nordvpn-android-sideload",
+      "packageName": "com.nordvpn.android",
+      "signingCertificateSha256": [
+        "BC64AE0725AF656B3B10B684CD1DF4C9D6B7F81BC5DC32DF3A3B2CE94CE61466"
+      ],
+      "status": "approved-vendor-signing"
     }
   ],
   "unknownApplications": "never-install-automatically"

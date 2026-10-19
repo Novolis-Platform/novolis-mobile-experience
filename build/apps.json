@@ -63,11 +63,13 @@
         "retention": "uninstall-preserves-user-data"
       },
       "update": {
-        "enabled": false,
+        "enabled": true,
         "appId": "Novolis.MobileExperience.Shell",
         "repository": "https://github.com/Novolis-Platform/novolis-mobile-experience",
-        "channel": "preview",
-        "distribution": "direct-github"
+        "channel": "stable",
+        "distribution": "direct-github",
+        "transport": "host-only",
+        "deviceNetwork": "none"
       },
       "release": {
         "githubRelease": true,

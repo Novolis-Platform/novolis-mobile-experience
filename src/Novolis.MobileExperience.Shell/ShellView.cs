@@ -186,31 +186,6 @@ public sealed class ShellView : UserControl
 
     private Control CreateApplicationCard(MobileApplicationEntry application)
     {
-        var launchButton = CreateButton(
-            "Open",
-            "action-button",
-            $"Open {application.DisplayName}");
-        launchButton.Click += async (_, _) =>
-        {
-            launchButton.IsEnabled = false;
-            try
-            {
-                var launched = await _catalog.LaunchAsync(application)
-                    .ConfigureAwait(true);
-                _status.Text = launched
-                    ? $"Opened {application.DisplayName}."
-                    : $"Android declined the launch request for {application.DisplayName}.";
-            }
-            catch (Exception ex)
-            {
-                _status.Text = $"Could not open {application.DisplayName}: {ex.Message}";
-            }
-            finally
-            {
-                launchButton.IsEnabled = true;
-            }
-        };
-
         var details = new StackPanel
         {
             Spacing = 4,
@@ -235,13 +210,37 @@ public sealed class ShellView : UserControl
         var row = new DockPanel
         {
             LastChildFill = true,
-            Children =
-            {
-                launchButton,
-                details,
-            },
         };
-        DockPanel.SetDock(launchButton, Dock.Right);
+        if (application.CanOpen)
+        {
+            var launchButton = CreateButton(
+                "Open",
+                "action-button",
+                $"Open {application.DisplayName}");
+            launchButton.Click += async (_, _) =>
+            {
+                launchButton.IsEnabled = false;
+                try
+                {
+                    var launched = await _catalog.LaunchAsync(application)
+                        .ConfigureAwait(true);
+                    _status.Text = launched
+                        ? $"Opened {application.DisplayName}."
+                        : $"Android declined the launch request for {application.DisplayName}.";
+                }
+                catch (Exception ex)
+                {
+                    _status.Text = $"Could not open {application.DisplayName}: {ex.Message}";
+                }
+                finally
+                {
+                    launchButton.IsEnabled = true;
+                }
+            };
+            DockPanel.SetDock(launchButton, Dock.Right);
+            row.Children.Add(launchButton);
+        }
+        row.Children.Add(details);
 
         return new Border
         {

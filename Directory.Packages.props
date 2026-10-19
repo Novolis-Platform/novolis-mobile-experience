@@ -16,5 +16,8 @@
     <PackageVersion Include="Novolis.Avalonia.GraphicalProfile" Version="2026.1.*" />
     <PackageVersion Include="Novolis.Avalonia.Mobile.Android" Version="2026.1.*" />
     <PackageVersion Include="Novolis.IO.Mobile.Android" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Registry.GitHub" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Registry.Primitives" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Registry.Updates" Version="2026.1.*" />
   </ItemGroup>
 </Project>

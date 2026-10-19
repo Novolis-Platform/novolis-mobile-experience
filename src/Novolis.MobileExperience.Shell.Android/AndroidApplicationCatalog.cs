@@ -43,15 +43,24 @@ public sealed class AndroidApplicationCatalog : IApplicationCatalog
                         ? packageName
                         : label,
                     ActivityName = QualifyActivityName(packageName, activityInfo.Name),
+                    IsHomeApplication = string.Equals(
+                        packageName,
+                        _context.PackageName,
+                        StringComparison.Ordinal),
                 };
             })
             .Where(entry => entry.ActivityName.Length > 0)
-            .OrderBy(entry => entry.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(entry => entry.PackageName, StringComparer.Ordinal)
-            .ThenBy(entry => entry.ActivityName, StringComparer.Ordinal)
+            .GroupBy(entry => entry.PackageName, StringComparer.Ordinal)
+            .Select(group => group
+                .OrderBy(
+                    entry => entry.DisplayName.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(entry => entry.ActivityName, StringComparer.Ordinal)
+                .First())
             .ToArray();
 
-        return Task.FromResult<IReadOnlyList<MobileApplicationEntry>>(entries);
+        return Task.FromResult<IReadOnlyList<MobileApplicationEntry>>(
+            MobileApplicationOrdering.SortForDisplay(entries));
     }
 
     /// <inheritdoc />

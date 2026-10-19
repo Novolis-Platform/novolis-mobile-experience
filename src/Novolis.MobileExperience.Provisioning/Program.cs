@@ -10,6 +10,8 @@ try
     {
         "inventory" => await RunInventoryAsync(args),
         "cleanup" => await RunCleanupAsync(args),
+        "privacy" => await RunPrivacyAsync(args),
+        "updates" => await RunUpdatesAsync(args),
         _ => PrintUsage(),
     };
 }
@@ -220,6 +222,332 @@ static async Task<int> RunCleanupAsync(IReadOnlyList<string> arguments)
     return 0;
 }
 
+static async Task<int> RunPrivacyAsync(IReadOnlyList<string> arguments)
+{
+    var serial = ReadOption(arguments, "--serial");
+    var outputDirectory = ReadOption(arguments, "--output-directory")
+        ?? Path.Combine(
+            "artifacts",
+            "privacy",
+            DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss"));
+    var privacyProfilePath = ReadOption(arguments, "--privacy-profile")
+        ?? Path.Combine(
+            "devices",
+            "lenovo-tab-m10-x605f",
+            "privacy.json");
+    var networkProfilePath = ReadOption(arguments, "--network-profile")
+        ?? Path.Combine(
+            "devices",
+            "lenovo-tab-m10-x605f",
+            "network.json");
+    var raw = HasFlag(arguments, "--raw");
+    var json = HasFlag(arguments, "--json");
+
+    using var privacyDocument = JsonDocument.Parse(
+        await File.ReadAllTextAsync(privacyProfilePath));
+    using var networkDocument = JsonDocument.Parse(
+        await File.ReadAllTextAsync(networkProfilePath));
+    var privacyRoot = privacyDocument.RootElement;
+    var networkRoot = networkDocument.RootElement;
+    var adb = new AndroidDebugBridge();
+    var result = await new AndroidDeviceInventoryCollector(adb).CollectAsync(serial);
+    if (!result.Ok || result.Inventory is null)
+    {
+        Console.Error.WriteLine(
+            result.Failure?.Message
+            ?? "Privacy inventory did not produce a device snapshot.");
+        return 1;
+    }
+
+    var inventory = raw
+        ? result.Inventory
+        : AndroidOutputRedactor.RedactInventory(result.Inventory);
+    var requiredAccountCount = ReadInt(
+        privacyRoot,
+        "requiredAccountCount",
+        0);
+    var vpnPackage = ReadObjectString(
+        networkRoot,
+        "vpn",
+        "requiredPackage")
+        ?? ReadObjectString(privacyRoot, "vpn", "packageName")
+        ?? "com.nordvpn.android";
+    var requiredPackages = ReadStringArray(
+        privacyRoot,
+        "packagePolicy",
+        "requiredPackages");
+    var forbiddenPackages = ReadStringArray(
+        privacyRoot,
+        "packagePolicy",
+        "forbiddenPackages");
+    var presentPackages = inventory.Packages
+        .Select(package => package.PackageName)
+        .ToHashSet(StringComparer.Ordinal);
+    var enabledPackages = inventory.Packages
+        .Where(package => package.IsEnabled)
+        .Select(package => package.PackageName)
+        .ToHashSet(StringComparer.Ordinal);
+    var findings = new List<AndroidPrivacyFinding>();
+
+    AddFinding(
+        findings,
+        "accounts",
+        inventory.Accounts.AccountCount == requiredAccountCount,
+        $"Expected {requiredAccountCount} configured accounts; " +
+        $"observed {inventory.Accounts.AccountCount}.");
+    foreach (var package in requiredPackages)
+    {
+        AddFinding(
+            findings,
+            $"required-package:{package}",
+            enabledPackages.Contains(package),
+            enabledPackages.Contains(package)
+                ? $"Required package {package} is installed and enabled."
+                : $"Required package {package} is missing or disabled.");
+    }
+
+    foreach (var package in forbiddenPackages)
+    {
+        AddFinding(
+            findings,
+            $"forbidden-package:{package}",
+            !presentPackages.Contains(package),
+            presentPackages.Contains(package)
+                ? $"Forbidden package {package} is still visible to Android user 0."
+                : $"Forbidden package {package} is absent for Android user 0.");
+    }
+
+    var nordEnabled = enabledPackages.Contains(vpnPackage);
+    var vpnConfigured = string.Equals(
+        inventory.Network.AlwaysOnVpnPackage,
+        vpnPackage,
+        StringComparison.Ordinal);
+    var vpnActive = inventory.Network.ActiveNetworkIsVpn;
+    AddFinding(
+        findings,
+        "nordvpn-enabled",
+        nordEnabled,
+        nordEnabled
+            ? "NordVPN is installed and enabled."
+            : "NordVPN is missing or disabled.");
+    AddFinding(
+        findings,
+        "vpn-configured",
+        vpnConfigured,
+        vpnConfigured
+            ? "NordVPN is selected as Android's always-on VPN."
+            : "NordVPN is not configured as Android's always-on VPN.");
+    AddFinding(
+        findings,
+        "vpn-active",
+        vpnActive,
+        vpnActive
+            ? "The active default network is a VPN transport."
+            : "The active default network is not a VPN transport.");
+
+    var lockdownRequired = ReadBool(
+        networkRoot,
+        "vpn",
+        "lockdownRecommended");
+    if (lockdownRequired)
+    {
+        AddFinding(
+            findings,
+            "vpn-lockdown",
+            inventory.Network.AlwaysOnVpnLockdown,
+            inventory.Network.AlwaysOnVpnLockdown
+                ? "Android VPN lockdown is enabled."
+                : "Android VPN lockdown is not enabled.");
+    }
+
+    var failures = findings
+        .Where(finding => !finding.Ok)
+        .ToArray();
+    var audit = new
+    {
+        ok = failures.Length == 0,
+        collectedAtUtc = inventory.CollectedAtUtc,
+        device = inventory.Device,
+        accounts = inventory.Accounts,
+        network = inventory.Network,
+        nordVpnPackage = vpnPackage,
+        findings,
+        remediation = new[]
+        {
+            "Complete NordVPN sign-in and approve Android VPN consent on the tablet.",
+            "Select NordVPN as always-on VPN and enable lockdown after the tunnel is verified.",
+            "Do not treat package presence as proof that a VPN tunnel is active.",
+        },
+        warnings = result.Warnings,
+    };
+    var directory = Path.GetFullPath(outputDirectory);
+    Directory.CreateDirectory(directory);
+    var outputPath = Path.Combine(directory, "privacy-audit.json");
+    await File.WriteAllTextAsync(
+        outputPath,
+        JsonSerializer.Serialize(audit, JsonOptions()));
+    if (json)
+        Console.WriteLine(JsonSerializer.Serialize(audit, JsonOptions()));
+    else
+    {
+        Console.WriteLine($"Privacy audit: {(audit.ok ? "PASS" : "ATTENTION REQUIRED")}");
+        foreach (var finding in findings)
+            Console.WriteLine(
+                $"  {(finding.Ok ? "PASS" : "FAIL")} " +
+                $"{finding.Id}: {finding.Message}");
+        Console.WriteLine($"Evidence: {outputPath}");
+        foreach (var warning in result.Warnings)
+            Console.WriteLine($"warning: {warning}");
+    }
+
+    return audit.ok ? 0 : 3;
+}
+
+static async Task<int> RunUpdatesAsync(IReadOnlyList<string> arguments)
+{
+    var action = arguments.Skip(1)
+        .FirstOrDefault(argument => !argument.StartsWith("--", StringComparison.Ordinal))
+        ?.ToLowerInvariant()
+        ?? "check";
+    if (action is not ("check" or "apply" or "maintain"))
+    {
+        Console.Error.WriteLine(
+            $"Unknown updates action '{action}'. Use 'check', 'apply', or 'maintain'.");
+        return 2;
+    }
+
+    var directGithub = HasFlag(arguments, "--direct-github");
+    if (action is "apply" or "maintain"
+        && (!directGithub || !HasFlag(arguments, "--yes")))
+    {
+        Console.Error.WriteLine(
+            "Update installation requires --direct-github and --yes. " +
+            "The default profile keeps device and host update access explicit.");
+        return 2;
+    }
+
+    var options = new MobileUpdateOptions
+    {
+        CatalogDirectory = ReadOption(arguments, "--catalog-directory")
+            ?? Path.Combine("catalog"),
+        OutputDirectory = ReadOption(arguments, "--output-directory")
+            ?? Path.Combine("artifacts", "updates"),
+        Serial = ReadOption(arguments, "--serial"),
+        ApplicationId = ReadOption(arguments, "--application"),
+        AllowDirectGithub = directGithub,
+        IncludeNotInstalled = HasFlag(arguments, "--include-not-installed")
+            || action is "apply" or "maintain",
+    };
+    var service = new MobileUpdateService(new AndroidDebugBridge());
+    var report = action switch
+    {
+        "apply" => await service.ApplyAsync(options),
+        "maintain" => await service.MaintainAsync(options),
+        _ => await service.CheckAsync(options),
+    };
+    var json = HasFlag(arguments, "--json");
+    if (json)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(report, JsonOptions()));
+    }
+    else
+    {
+        Console.WriteLine(
+            $"Updates {(report.Ok ? "completed" : "completed with attention required")}; " +
+            $"source: {(report.UsedDirectGithub ? "direct GitHub on host" : "local mirror policy")}");
+        foreach (var application in report.Applications)
+        {
+            var version = application.AvailableVersion is null
+                ? application.CurrentVersion
+                : $"{application.CurrentVersion} → {application.AvailableVersion}";
+            Console.WriteLine(
+                $"  {application.DisplayName}: {application.State} " +
+                $"({version})" +
+                (application.ErrorMessage is null
+                    ? ""
+                    : $" — {application.ErrorMessage}"));
+        }
+
+        foreach (var warning in report.Warnings)
+            Console.WriteLine($"warning: {warning}");
+        Console.WriteLine(
+            $"Evidence: {Path.GetFullPath(Path.Combine(options.OutputDirectory, "update-report.json"))}");
+    }
+
+    return report.Ok ? 0 : 3;
+}
+
+static void AddFinding(
+    ICollection<AndroidPrivacyFinding> findings,
+    string id,
+    bool ok,
+    string message) =>
+    findings.Add(new AndroidPrivacyFinding
+    {
+        Id = id,
+        Ok = ok,
+        Message = message,
+    });
+
+static int ReadInt(
+    JsonElement root,
+    string property,
+    int fallback)
+{
+    return root.TryGetProperty(property, out var value)
+        && value.TryGetInt32(out var parsed)
+        ? parsed
+        : fallback;
+}
+
+static bool ReadBool(
+    JsonElement root,
+    string objectProperty,
+    string property)
+{
+    return root.TryGetProperty(objectProperty, out var nested)
+        && nested.ValueKind == JsonValueKind.Object
+        && nested.TryGetProperty(property, out var value)
+        && value.ValueKind == JsonValueKind.True;
+}
+
+static string? ReadObjectString(
+    JsonElement root,
+    string objectProperty,
+    string property)
+{
+    if (!root.TryGetProperty(objectProperty, out var nested)
+        || nested.ValueKind != JsonValueKind.Object
+        || !nested.TryGetProperty(property, out var value)
+        || value.ValueKind != JsonValueKind.String)
+    {
+        return null;
+    }
+
+    return value.GetString();
+}
+
+static IReadOnlyList<string> ReadStringArray(
+    JsonElement root,
+    string objectProperty,
+    string property)
+{
+    if (!root.TryGetProperty(objectProperty, out var nested)
+        || nested.ValueKind != JsonValueKind.Object
+        || !nested.TryGetProperty(property, out var value)
+        || value.ValueKind != JsonValueKind.Array)
+    {
+        return [];
+    }
+
+    return value.EnumerateArray()
+        .Where(element => element.ValueKind == JsonValueKind.String)
+        .Select(element => element.GetString())
+        .Where(item => !string.IsNullOrWhiteSpace(item))
+        .Cast<string>()
+        .ToArray();
+}
+
 static async Task<(bool Ok, string? Failure)> SetAndVerifyHomeActivityAsync(
     AndroidDebugBridge adb,
     string component,
@@ -322,9 +650,17 @@ static int PrintUsage()
 {
     Console.Error.WriteLine(
         "Usage: Novolis.MobileExperience.Provisioning " +
-        "<inventory|cleanup> [options]");
+        "<inventory|cleanup|privacy|updates> [options]");
     Console.Error.WriteLine(
         "  cleanup is preview-only unless --apply --yes are both supplied.");
+    Console.Error.WriteLine(
+        "  privacy is read-only and returns exit code 3 until the VPN profile is satisfied.");
+    Console.Error.WriteLine(
+        "  updates check is host-only and local-mirror by default; " +
+        "use updates check --direct-github for explicit public-release access.");
+    Console.Error.WriteLine(
+        "  updates maintain installs and refreshes every automatic release-backed app; " +
+        "use --direct-github --yes.");
     return 2;
 }
 

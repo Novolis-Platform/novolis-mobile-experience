@@ -6,11 +6,41 @@
   "lenovoAccountRequired": false,
   "telemetry": "local-diagnostics-only",
   "backgroundMonitoring": "disabled-by-default",
+  "vpn": {
+    "packageName": "com.nordvpn.android",
+    "configurationMustBeCompletedByUser": true,
+    "activeTunnelRequiredForNetworkedApps": true,
+    "alwaysOnVpnRecommended": true,
+    "lockdownRecommended": true
+  },
+  "packagePolicy": {
+    "forbiddenPackages": [
+      "com.google.android.gms",
+      "com.google.android.gsf",
+      "com.android.vending",
+      "com.google.android.chrome",
+      "com.google.android.googlequicksearchbox"
+    ],
+    "requiredPackages": [
+      "com.nordvpn.android",
+      "org.videolan.vlc",
+      "com.novolis.mobileexperience.shell"
+    ],
+    "allowedSystemGooglePackages": [
+      "com.google.android.ext.services",
+      "com.google.android.ext.shared",
+      "com.google.android.inputmethod.latin",
+      "com.google.android.packageinstaller",
+      "com.google.android.webview"
+    ]
+  },
   "verification": {
     "recordInstalledPackages": true,
     "recordEnabledState": true,
     "recordAccountsWithoutNames": true,
     "recordSelectedSettings": true,
-    "recordIdleNetworkDestinations": true
+    "recordIdleNetworkDestinations": true,
+    "recordVpnTransport": true,
+    "recordAlwaysOnVpnPolicy": true
   }
 }
