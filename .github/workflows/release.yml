@@ -57,6 +57,10 @@ jobs:
       - uses: Novolis-Platform/novolis-workflows/actions/prepare-novolis-build@main
         with:
           token: ${{ github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Install Android workload
         shell: bash
         run: dotnet workload install android
@@ -83,6 +87,8 @@ jobs:
             -p:AndroidFastDeployment=false \
             -p:EmbedAssembliesIntoApk=true \
             -p:ApplicationDisplayVersion="$PACKAGE_VERSION" \
+            -p:ApplicationVersion="$GITHUB_RUN_NUMBER" \
+            -p:NovolisAndroidVersionCode="$GITHUB_RUN_NUMBER" \
             -p:AndroidKeyStore=true \
             -p:AndroidSigningKeyStore="$key_store" \
             -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS" \
