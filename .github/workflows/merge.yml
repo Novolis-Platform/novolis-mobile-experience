@@ -1,0 +1,20 @@
+name: Merge
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-experience-merge-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    uses: Novolis-Platform/novolis-workflows/.github/workflows/apps-ci.yml@main
+    secrets: inherit
+    with:
+      mode: ${{ github.event_name == 'workflow_dispatch' && 'dispatch' || 'merge' }}
+    permissions:
+      contents: read
+      packages: read

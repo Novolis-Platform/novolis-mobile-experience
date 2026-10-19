@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "applications": [
+    {
+      "id": "mobile-experience-shell",
+      "displayName": "Novolis Mobile Experience",
+      "packageName": "com.novolis.mobileexperience.shell",
+      "source": "built-in",
+      "install": "managed",
+      "update": "staged",
+      "launch": "android-activity"
+    }
+  ]
+}

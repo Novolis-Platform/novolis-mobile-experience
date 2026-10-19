@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "profileId": "lenovo-tab-m10-x605f",
+  "manufacturer": "LENOVO",
+  "model": "Lenovo TB-X605F",
+  "device": "X605F",
+  "androidRelease": "9",
+  "apiLevel": 28,
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "armeabi"
+  ],
+  "fingerprint": "Lenovo/LenovoTB-X605F-EEA/X605F:9/PKQ1.190319.001/S210273_221107_ROW:user/release-keys",
+  "securityPatch": "2020-10-01",
+  "verifiedBootState": "green",
+  "profileStatus": "inventory-baseline"
+}

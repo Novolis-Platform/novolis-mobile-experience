@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <NovolisYear>2026</NovolisYear>
+    <NovolisMajor>1</NovolisMajor>
+    <NovolisMinor>0</NovolisMinor>
+    <NovolisPlatformVersion>2026.1.0</NovolisPlatformVersion>
+    <NovolisPackageFloatVersion>2026.1.*</NovolisPackageFloatVersion>
+    <NovolisLocalBuild Condition="'$(NovolisLocalBuild)' == ''">1</NovolisLocalBuild>
+  </PropertyGroup>
+</Project>

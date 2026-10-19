@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "2026.1.0",
+  "channels": {
+    "android-apk": {
+      "id": "android-apk",
+      "runner": "ubuntu-latest",
+      "artifacts": ["apk", "sha256"],
+      "description": "Installable Android APK with monotonic versionCode."
+    }
+  },
+  "apps": [
+    {
+      "key": "mobile-experience",
+      "choice": "NovolisMobileExperience",
+      "displayName": "Novolis Mobile Experience",
+      "sourceRoot": "src",
+      "solution": "Novolis.MobileExperience.slnx",
+      "artifactPrefix": "NovolisMobileExperience",
+      "stack": "avalonia-mobile",
+      "status": "internal",
+      "projects": {
+        "publishWindows": null,
+        "linuxCi": [],
+        "android": "src/Novolis.MobileExperience.Shell.Android/Novolis.MobileExperience.Shell.Android.csproj",
+        "maui": null,
+        "tests": ["tests/Novolis.MobileExperience.Unit/Novolis.MobileExperience.Unit.csproj"],
+        "all": [
+          "src/Novolis.MobileExperience.Shell/Novolis.MobileExperience.Shell.csproj",
+          "src/Novolis.MobileExperience.Shell.Android/Novolis.MobileExperience.Shell.Android.csproj",
+          "src/Novolis.MobileExperience.DeviceControl/Novolis.MobileExperience.DeviceControl.csproj",
+          "src/Novolis.MobileExperience.Provisioning/Novolis.MobileExperience.Provisioning.csproj",
+          "tests/Novolis.MobileExperience.Unit/Novolis.MobileExperience.Unit.csproj"
+        ]
+      },
+      "local": ["android"],
+      "ship": ["android-apk"],
+      "validation": {
+        "changedPathGlobs": ["src/**", "tests/**", "devices/**", "catalog/**"],
+        "runTests": true,
+        "androidCompile": true,
+        "windowsCi": false,
+        "windowsWorkload": false,
+        "linuxCi": false,
+        "fanOutStacks": ["avalonia", "android"]
+      },
+      "windows": null,
+      "android": {
+        "project": "src/Novolis.MobileExperience.Shell.Android/Novolis.MobileExperience.Shell.Android.csproj",
+        "applicationId": "com.novolis.mobileexperience.shell",
+        "versionCodeStrategy": "release-run",
+        "signingSecretKey": "NOVOLIS_MOBILE_EXPERIENCE_ANDROID",
+        "allowBackup": false,
+        "usesCleartextTraffic": false,
+        "permissionAllowlist": [],
+        "networkPolicy": "none"
+      },
+      "data": {
+        "appDataRoot": "%LOCALAPPDATA%\\Novolis\\mobile-experience",
+        "cacheRoot": "%LOCALAPPDATA%\\Novolis\\mobile-experience\\cache",
+        "credentialsNamespace": "Novolis.MobileExperience",
+        "networkDestinations": [],
+        "retention": "uninstall-preserves-user-data"
+      },
+      "update": {
+        "enabled": false,
+        "appId": "Novolis.MobileExperience.Shell",
+        "repository": "https://github.com/Novolis-Platform/novolis-mobile-experience",
+        "channel": "preview",
+        "distribution": "direct-github"
+      },
+      "release": {
+        "githubRelease": true,
+        "checksums": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Novolis.MobileExperience.Provisioning</RootNamespace>
+    <AssemblyName>Novolis.MobileExperience.Provisioning</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <Description>Read-only Android device inventory and Novolis Mobile Experience provisioning host.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <LibraryReference Include="Novolis.IO.Mobile.Android" />
+  </ItemGroup>
+</Project>

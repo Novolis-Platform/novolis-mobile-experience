@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "profileId": "lenovo-tab-m10-x605f",
+  "mode": "Clean",
+  "destructiveActionsEnabled": true,
+  "protectedPackages": [
+    "android",
+    "com.android.documentsui",
+    "com.android.externalstorage",
+    "com.android.managedprovisioning",
+    "com.android.packageinstaller",
+    "com.android.settings",
+    "com.android.shell",
+    "com.android.systemui",
+    "com.google.android.webview"
+  ],
+  "retainedPackages": [
+    "com.nordvpn.android",
+    "org.videolan.vlc",
+    "com.novolis.mobileexperience.shell"
+  ],
+  "retainUntilCompatibilityTested": [
+    "com.google.android.gms",
+    "com.google.android.gsf",
+    "com.google.android.packageinstaller",
+    "com.android.chrome"
+  ],
+  "candidateThirdPartyPackages": [
+    "com.amazon.dee.app",
+    "com.microsoft.office.outlook",
+    "com.skype.raider",
+    "com.yandex.browser",
+    "ru.yandex.searchplugin"
+  ],
+  "actions": []
+}

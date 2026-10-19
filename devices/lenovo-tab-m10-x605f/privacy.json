@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "profileId": "lenovo-tab-m10-x605f",
+  "requiredAccountCount": 0,
+  "googleAccountRequired": false,
+  "lenovoAccountRequired": false,
+  "telemetry": "local-diagnostics-only",
+  "backgroundMonitoring": "disabled-by-default",
+  "verification": {
+    "recordInstalledPackages": true,
+    "recordEnabledState": true,
+    "recordAccountsWithoutNames": true,
+    "recordSelectedSettings": true,
+    "recordIdleNetworkDestinations": true
+  }
+}

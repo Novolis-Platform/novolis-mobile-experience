@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "profileId": "lenovo-tab-m10-x605f",
+  "mode": "local-mirror",
+  "directGithubEnabled": false,
+  "backgroundPolling": false,
+  "allowedDestinations": [],
+  "notes": [
+    "The shell has no network permission in the first slice.",
+    "A local mirror remains the preferred update path.",
+    "Network enforcement must be validated on the physical tablet before cleanup."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "trustedApplications": [
+    {
+      "id": "mobile-experience-shell",
+      "packageName": "com.novolis.mobileexperience.shell",
+      "signingCertificateSha256": [],
+      "status": "pending-release-signing"
+    }
+  ],
+  "unknownApplications": "never-install-automatically"
+}

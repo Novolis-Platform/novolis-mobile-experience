@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <NovolisGitHubRepository>novolis-mobile-experience</NovolisGitHubRepository>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Authors>Novolis</Authors>
+    <Company>Novolis</Company>
+    <Copyright>Copyright (c) Novolis-Platform</Copyright>
+    <RepositoryUrl>https://github.com/Novolis-Platform/novolis-mobile-experience</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)build\version.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)build\version.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.OneTypePerFile.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.OneTypePerFile.props')" />
+</Project>

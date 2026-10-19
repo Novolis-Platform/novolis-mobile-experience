@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Avalonia" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Android" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.13" />
+    <PackageVersion Include="TUnit" Version="1.75.0" />
+    <PackageVersion Include="Xamarin.AndroidX.AppCompat" Version="1.8.0" />
+    <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.2.0.3" />
+    <PackageVersion Include="Novolis.Avalonia.GraphicalProfile" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Avalonia.Mobile.Android" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.IO.Mobile.Android" Version="2026.1.*" />
+  </ItemGroup>
+</Project>

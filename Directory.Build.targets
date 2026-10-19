@@ -1,0 +1,6 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.Packaging.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.Packaging.targets')" />
+  <Import Project="$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.GraphicalProfile.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\novolis-governance\build\Novolis.GraphicalProfile.props')" />
+</Project>

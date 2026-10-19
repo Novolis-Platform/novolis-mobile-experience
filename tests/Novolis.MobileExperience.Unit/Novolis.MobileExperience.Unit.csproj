@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Novolis.MobileExperience.Unit</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Novolis.MobileExperience.Shell/Novolis.MobileExperience.Shell.csproj" />
+    <ProjectReference Include="../../src/Novolis.MobileExperience.Provisioning/Novolis.MobileExperience.Provisioning.csproj" />
+  </ItemGroup>
+</Project>

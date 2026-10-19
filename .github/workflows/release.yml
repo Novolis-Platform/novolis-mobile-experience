@@ -1,0 +1,20 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Application key or All
+        required: false
+        default: All
+        type: string
+
+jobs:
+  release:
+    uses: Novolis-Platform/novolis-workflows/.github/workflows/apps-release.yml@main
+    secrets: inherit
+    with:
+      app: ${{ inputs.app || 'All' }}
+    permissions:
+      contents: write
+      packages: read

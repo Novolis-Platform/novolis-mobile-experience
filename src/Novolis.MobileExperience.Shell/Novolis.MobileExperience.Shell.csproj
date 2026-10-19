@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Novolis.MobileExperience.Shell</RootNamespace>
+    <AssemblyName>Novolis.MobileExperience.Shell</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <LibraryReference Include="Novolis.Avalonia.GraphicalProfile" />
+  </ItemGroup>
+</Project>

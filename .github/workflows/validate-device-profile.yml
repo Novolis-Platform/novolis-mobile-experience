@@ -1,0 +1,32 @@
+name: Validate device profile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'devices/**'
+      - 'catalog/**'
+      - 'privacy/**'
+      - '.github/workflows/validate-device-profile.yml'
+  pull_request:
+    paths:
+      - 'devices/**'
+      - 'catalog/**'
+      - 'privacy/**'
+      - '.github/workflows/validate-device-profile.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON profiles
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -File |
+            Where-Object { $_.FullName -match '\\(devices|catalog|privacy)\\' -and $_.Extension -eq '.json' }
+          foreach ($file in $files) {
+            Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json | Out-Null
+          }

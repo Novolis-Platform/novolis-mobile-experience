@@ -1,0 +1,19 @@
+name: Pull request
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: mobile-experience-pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    uses: Novolis-Platform/novolis-workflows/.github/workflows/apps-ci.yml@main
+    secrets: inherit
+    with:
+      mode: pull_request
+    permissions:
+      contents: read
+      packages: read

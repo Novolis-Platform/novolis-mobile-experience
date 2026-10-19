@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "novolis-apps",
+      "kind": "GitHubReleases",
+      "repository": "Novolis-Platform/novolis-apps",
+      "channel": "stable",
+      "authentication": "None",
+      "enabled": false,
+      "delivery": "local-mirror"
+    }
+  ]
+}

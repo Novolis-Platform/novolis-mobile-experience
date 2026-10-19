@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="nuget.config" />
+    <File Path="build/version.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Novolis.MobileExperience.DeviceControl/Novolis.MobileExperience.DeviceControl.csproj" />
+    <Project Path="src/Novolis.MobileExperience.Provisioning/Novolis.MobileExperience.Provisioning.csproj" />
+    <Project Path="src/Novolis.MobileExperience.Shell/Novolis.MobileExperience.Shell.csproj" />
+    <Project Path="src/Novolis.MobileExperience.Shell.Android/Novolis.MobileExperience.Shell.Android.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Novolis.MobileExperience.Unit/Novolis.MobileExperience.Unit.csproj" />
+  </Folder>
+</Solution>
