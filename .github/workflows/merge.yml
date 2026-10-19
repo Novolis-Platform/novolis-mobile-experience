@@ -11,10 +11,12 @@ concurrency:
 
 jobs:
   validate:
-    uses: Novolis-Platform/novolis-workflows/.github/workflows/apps-ci.yml@main
+    uses: Novolis-Platform/novolis-workflows/.github/workflows/dotnet-pull-request.yml@main
     secrets: inherit
     with:
-      mode: ${{ github.event_name == 'workflow_dispatch' && 'dispatch' || 'merge' }}
+      solution: Novolis.MobileExperience.slnx
+      run_tests: true
+      test_projects: tests/Novolis.MobileExperience.Unit/Novolis.MobileExperience.Unit.csproj
     permissions:
       contents: read
       packages: read

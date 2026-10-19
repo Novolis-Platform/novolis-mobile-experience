@@ -2,19 +2,146 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      app:
-        description: Application key or All
-        required: false
-        default: All
-        type: string
+
+permissions:
+  contents: write
+  packages: read
 
 jobs:
-  release:
-    uses: Novolis-Platform/novolis-workflows/.github/workflows/apps-release.yml@main
-    secrets: inherit
-    with:
-      app: ${{ inputs.app || 'All' }}
-    permissions:
-      contents: write
-      packages: read
+  plan:
+    name: Plan Android release
+    runs-on: ubuntu-latest
+    outputs:
+      package_version: ${{ steps.version.outputs.package-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Novolis-Platform/novolis-workflows/actions/read-version@main
+        id: version
+        with:
+          version-file: build/version.json
+          build-number: ${{ github.run_number }}
+
+  signing_preflight:
+    name: Verify Android signing inputs
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check persistent signing inputs
+        shell: pwsh
+        env:
+          SIGNING_SECRET_KEY: NOVOLIS_MOBILE_EXPERIENCE_ANDROID
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEY_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $missing = @(
+            if ([string]::IsNullOrWhiteSpace($env:ANDROID_KEYSTORE_BASE64)) { "${env:SIGNING_SECRET_KEY}_KEYSTORE_BASE64" }
+            if ([string]::IsNullOrWhiteSpace($env:ANDROID_KEY_ALIAS)) { "${env:SIGNING_SECRET_KEY}_KEY_ALIAS" }
+            if ([string]::IsNullOrWhiteSpace($env:ANDROID_KEYSTORE_PASSWORD)) { "${env:SIGNING_SECRET_KEY}_KEYSTORE_PASSWORD" }
+            if ([string]::IsNullOrWhiteSpace($env:ANDROID_KEY_PASSWORD)) { "${env:SIGNING_SECRET_KEY}_KEY_PASSWORD" }
+          )
+          if ($missing.Count -gt 0) {
+            throw "Android release signing inputs are not configured: $($missing -join ', ')"
+          }
+          Write-Host "Android signing inputs are configured for $env:SIGNING_SECRET_KEY."
+
+  android:
+    name: Build Android APK
+    needs: [plan, signing_preflight]
+    if: needs.signing_preflight.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Novolis-Platform/novolis-workflows/actions/prepare-novolis-build@main
+        with:
+          token: ${{ github.token }}
+      - name: Install Android workload
+        shell: bash
+        run: dotnet workload install android
+      - name: Publish signed APK
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ needs.plan.outputs.package_version }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.NOVOLIS_MOBILE_EXPERIENCE_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          key_store="$RUNNER_TEMP/novolis-mobile-experience.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$key_store"
+          dotnet publish \
+            src/Novolis.MobileExperience.Shell.Android/Novolis.MobileExperience.Shell.Android.csproj \
+            -f net10.0-android \
+            -c Release \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidPackageFormats=apk \
+            -p:AndroidBuildApplicationPackage=true \
+            -p:AndroidFastDeployment=false \
+            -p:EmbedAssembliesIntoApk=true \
+            -p:ApplicationDisplayVersion="$PACKAGE_VERSION" \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$key_store" \
+            -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS" \
+            -p:AndroidSigningStorePass="$ANDROID_KEYSTORE_PASSWORD" \
+            -p:AndroidSigningKeyPass="$ANDROID_KEY_PASSWORD"
+
+          mapfile -t apk_candidates < <(
+            find . -type f -path '*/bin/Release/*' -name '*-Signed.apk' | sort
+          )
+          if [ "${#apk_candidates[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one signed Android APK, found ${#apk_candidates[@]}."
+            printf '%s\n' "${apk_candidates[@]}"
+            exit 1
+          fi
+          cp "${apk_candidates[0]}" "artifacts/NovolisMobileExperience-${PACKAGE_VERSION}-android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-mobile-experience
+          path: artifacts/*.apk
+          if-no-files-found: error
+
+  publish:
+    name: Publish flat release
+    needs: [plan, signing_preflight, android]
+    if: always() && needs.plan.result == 'success' && needs.signing_preflight.result == 'success' && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-mobile-experience
+          path: artifacts
+      - name: Validate release files
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ needs.plan.outputs.package_version }}
+        run: |
+          set -euo pipefail
+          mapfile -t apk_files < <(find artifacts -maxdepth 1 -type f -name '*.apk' | sort)
+          if [ "${#apk_files[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one APK before release creation, found ${#apk_files[@]}."
+            exit 1
+          fi
+          expected="artifacts/NovolisMobileExperience-${PACKAGE_VERSION}-android.apk"
+          if [ ! -f "$expected" ]; then
+            echo "::error::Expected release APK is missing: $expected"
+            exit 1
+          fi
+          sha256sum "$expected" > artifacts/SHA256SUMS.txt
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_VERSION: ${{ needs.plan.outputs.package_version }}
+        run: |
+          set -euo pipefail
+          gh release create "v${PACKAGE_VERSION}" \
+            artifacts/NovolisMobileExperience-"${PACKAGE_VERSION}"-android.apk \
+            artifacts/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "v${PACKAGE_VERSION}" \
+            --notes "Novolis Mobile Experience Android release." \
+            --latest
