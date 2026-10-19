@@ -34,6 +34,38 @@
       "status": "approved"
     },
     {
+      "id": "nmule",
+      "packageName": "com.novolis.nmule",
+      "signingCertificateSha256": [
+        "4EC96253BBA0BDE722696C77CA1ECB7290F44D7BC533F1099A50F215CDE64EE0"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "novolis-maps",
+      "packageName": "com.novolis.maps",
+      "signingCertificateSha256": [
+        "4A26B5ABCEBE7E6CA56976C2F994C3AC96667E193CC0227E2DE4D75324B7A47A"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "novolis-pdf-reader",
+      "packageName": "com.novolis.pdfreader",
+      "signingCertificateSha256": [
+        "4E0A6732807FCAE164ED427C66ED4BD1483F4E44B1FB2F20E9D7601378C50D1C"
+      ],
+      "status": "approved"
+    },
+    {
+      "id": "sketch-studio",
+      "packageName": "com.novolis.sketchstudio",
+      "signingCertificateSha256": [
+        "B1D3B2786B7A52B32BF037E906A002BC8DE9A5C886FBB80AAD2E1D814C19CBD9"
+      ],
+      "status": "approved"
+    },
+    {
       "id": "nordvpn-android-sideload",
       "packageName": "com.nordvpn.android",
       "signingCertificateSha256": [

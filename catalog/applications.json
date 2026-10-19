@@ -45,6 +45,50 @@
       "install": "managed",
       "update": "automatic",
       "launch": "android-activity"
+    },
+    {
+      "id": "nmule",
+      "displayName": "nMule",
+      "packageName": "com.novolis.nmule",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.nMule",
+      "channel": "preview",
+      "install": "managed",
+      "update": "manual",
+      "launch": "android-activity"
+    },
+    {
+      "id": "novolis-maps",
+      "displayName": "Novolis Maps",
+      "packageName": "com.novolis.maps",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.Maps",
+      "channel": "stable",
+      "install": "managed",
+      "update": "automatic",
+      "launch": "android-activity"
+    },
+    {
+      "id": "novolis-pdf-reader",
+      "displayName": "Novolis PDF Reader",
+      "packageName": "com.novolis.pdfreader",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.PdfReader",
+      "channel": "stable",
+      "install": "managed",
+      "update": "automatic",
+      "launch": "android-activity"
+    },
+    {
+      "id": "sketch-studio",
+      "displayName": "Sketch Studio",
+      "packageName": "com.novolis.sketchstudio",
+      "source": "novolis-apps",
+      "updateAppId": "Novolis.SketchStudio",
+      "channel": "stable",
+      "install": "managed",
+      "update": "automatic",
+      "launch": "android-activity"
     }
   ]
 }
