@@ -9,6 +9,15 @@ public sealed record AndroidCleanupExecution
     /// <summary>APK backups created before package changes.</summary>
     public IReadOnlyList<string> Backups { get; init; } = [];
 
+    /// <summary>
+    /// Recovery metadata for system-image APKs unreadable to the ADB shell
+    /// user. The packages remain in the stock image.
+    /// </summary>
+    public IReadOnlyList<AndroidSystemImageEvidence> SystemImageEvidence { get; init; } = [];
+
+    /// <summary>Device-admin components explicitly removed by the profile.</summary>
+    public IReadOnlyList<string> RemovedDeviceAdminComponents { get; init; } = [];
+
     /// <summary>Packages successfully removed from the selected Android user.</summary>
     public IReadOnlyList<string> RemovedPackages { get; init; } = [];
 

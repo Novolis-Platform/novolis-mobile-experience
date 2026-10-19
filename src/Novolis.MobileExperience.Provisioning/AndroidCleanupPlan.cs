@@ -35,21 +35,13 @@ public sealed record AndroidCleanupPlan
         var protectedPackages = ToSet(profile.ProtectedPackages);
         var retainedPackages = ToSet(profile.RetainedPackages);
         retainedPackages.UnionWith(profile.RetainUntilCompatibilityTested);
-        var candidates = ToSet(profile.CandidateThirdPartyPackages);
+        var thirdPartyCandidates = ToSet(profile.CandidateThirdPartyPackages);
+        var systemCandidates = ToSet(profile.CandidateSystemPackages);
 
         var decisions = inventory.Packages
             .OrderBy(package => package.PackageName, StringComparer.Ordinal)
             .Select(package =>
             {
-                if (package.IsSystem)
-                {
-                    return new AndroidCleanupDecision
-                    {
-                        Package = package,
-                        Reason = "System-image package is protected by default.",
-                    };
-                }
-
                 if (protectedPackages.Contains(package.PackageName))
                 {
                     return new AndroidCleanupDecision
@@ -68,13 +60,36 @@ public sealed record AndroidCleanupPlan
                     };
                 }
 
-                if (candidates.Contains(package.PackageName))
+                if (package.IsSystem && systemCandidates.Contains(package.PackageName))
                 {
                     return new AndroidCleanupDecision
                     {
                         Package = package,
                         Remove = true,
+                        Operation = "remove-for-user",
+                        Reason =
+                            "Audited system-image package is approved for reversible removal " +
+                            "from Android user 0.",
+                    };
+                }
+
+                if (!package.IsSystem && thirdPartyCandidates.Contains(package.PackageName))
+                {
+                    return new AndroidCleanupDecision
+                    {
+                        Package = package,
+                        Remove = true,
+                        Operation = "uninstall",
                         Reason = "Audited non-system package is an approved cleanup candidate.",
+                    };
+                }
+
+                if (package.IsSystem)
+                {
+                    return new AndroidCleanupDecision
+                    {
+                        Package = package,
+                        Reason = "System-image package is protected by default.",
                     };
                 }
 

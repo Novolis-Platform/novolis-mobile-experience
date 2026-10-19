@@ -43,6 +43,27 @@ public sealed record AndroidCleanupProfile
     [JsonPropertyName("candidateThirdPartyPackages")]
     public IReadOnlyList<string> CandidateThirdPartyPackages { get; init; } = [];
 
+    /// <summary>
+    /// Explicitly audited system-image packages eligible for removal for
+    /// Android user 0. The system APK remains available for recovery.
+    /// </summary>
+    [JsonPropertyName("candidateSystemPackages")]
+    public IReadOnlyList<string> CandidateSystemPackages { get; init; } = [];
+
+    /// <summary>
+    /// Optional fully qualified Android component to set as the user 0 HOME
+    /// activity before any launcher package is removed.
+    /// </summary>
+    [JsonPropertyName("homeActivity")]
+    public string? HomeActivity { get; init; }
+
+    /// <summary>
+    /// Explicit device-admin components that may be removed before their
+    /// owning package is removed for user 0.
+    /// </summary>
+    [JsonPropertyName("activeDeviceAdminComponentsToRemove")]
+    public IReadOnlyList<string> ActiveDeviceAdminComponentsToRemove { get; init; } = [];
+
     /// <summary>Loads a profile using the repository's camel-case JSON contract.</summary>
     public static async Task<AndroidCleanupProfile> LoadAsync(
         string path,

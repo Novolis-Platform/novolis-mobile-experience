@@ -11,6 +11,9 @@ public sealed record AndroidCleanupDecision
     /// <summary>True when the package is eligible for removal in this plan.</summary>
     public bool Remove { get; init; }
 
+    /// <summary>Apply operation: retain, uninstall, or remove-for-user.</summary>
+    public string Operation { get; init; } = "retain";
+
     /// <summary>Human-readable policy explanation.</summary>
     public required string Reason { get; init; }
 }

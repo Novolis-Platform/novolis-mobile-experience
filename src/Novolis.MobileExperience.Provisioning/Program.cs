@@ -140,6 +140,21 @@ static async Task<int> RunCleanupAsync(IReadOnlyList<string> arguments)
         return 2;
     }
 
+    if (!string.IsNullOrWhiteSpace(profile.HomeActivity))
+    {
+        var home = await SetAndVerifyHomeActivityAsync(
+            adb,
+            profile.HomeActivity,
+            serial);
+        if (!home.Ok)
+        {
+            Console.Error.WriteLine(home.Failure);
+            return 1;
+        }
+
+        Console.WriteLine($"HOME activity set: {profile.HomeActivity}");
+    }
+
     var execution = await AndroidCleanupExecutor.ExecuteAsync(
         adb,
         plan,
@@ -184,6 +199,8 @@ static async Task<int> RunCleanupAsync(IReadOnlyList<string> arguments)
         outputDirectory = Path.GetFullPath(outputDirectory),
         removedPackages = execution.RemovedPackages,
         backups = execution.Backups,
+        systemImageEvidence = execution.SystemImageEvidence,
+        removedDeviceAdminComponents = execution.RemovedDeviceAdminComponents,
     };
     if (json)
         Console.WriteLine(JsonSerializer.Serialize(applied, JsonOptions()));
@@ -194,9 +211,52 @@ static async Task<int> RunCleanupAsync(IReadOnlyList<string> arguments)
         Console.WriteLine($"Evidence: {Path.GetFullPath(outputDirectory)}");
         foreach (var backup in execution.Backups)
             Console.WriteLine($"Backup: {backup}");
+        foreach (var evidence in execution.SystemImageEvidence)
+            Console.WriteLine(
+                $"System-image recovery: {evidence.PackageName} — " +
+                evidence.RecoveryCommand);
     }
 
     return 0;
+}
+
+static async Task<(bool Ok, string? Failure)> SetAndVerifyHomeActivityAsync(
+    AndroidDebugBridge adb,
+    string component,
+    string? serial)
+{
+    if (component.Any(char.IsWhiteSpace)
+        || component.Count(character => character == '/') != 1)
+    {
+        return (false, $"Invalid HOME activity component in profile: {component}");
+    }
+
+    var set = await adb.ShellAsync(
+            $"cmd package set-home-activity {component}",
+            serial)
+        .ConfigureAwait(false);
+    if (!set.Ok)
+    {
+        return (
+            false,
+            $"Could not set HOME activity to {component}: {set.Diagnostic}");
+    }
+
+    var resolved = await adb.ShellAsync(
+            "cmd package resolve-activity --brief " +
+            "-a android.intent.action.MAIN -c android.intent.category.HOME",
+            serial)
+        .ConfigureAwait(false);
+    if (!resolved.Ok
+        || !resolved.StdOut.Contains(component, StringComparison.Ordinal))
+    {
+        return (
+            false,
+            $"HOME activity verification failed. Expected {component}; " +
+            $"resolver returned: {resolved.Diagnostic}");
+    }
+
+    return (true, null);
 }
 
 static async Task WriteCleanupFilesAsync(
@@ -235,6 +295,7 @@ static object ToCleanupPayload(AndroidCleanupDecision decision) =>
         system = decision.Package.IsSystem,
         enabled = decision.Package.IsEnabled,
         remove = decision.Remove,
+        operation = decision.Operation,
         reason = decision.Reason,
     };
 
@@ -245,12 +306,13 @@ static void WriteCleanupSummary(
     Console.WriteLine($"Cleanup preview: {Path.GetFullPath(outputDirectory)}");
     Console.WriteLine($"Removals: {plan.Removals.Count}");
     foreach (var removal in plan.Removals)
-        Console.WriteLine($"  REMOVE {removal.Package.PackageName} — {removal.Reason}");
+        Console.WriteLine(
+            $"  REMOVE ({removal.Operation}) {removal.Package.PackageName} — {removal.Reason}");
     Console.WriteLine($"Review required: {plan.ReviewRequired.Count}");
     foreach (var review in plan.ReviewRequired)
         Console.WriteLine($"  KEEP/REVIEW {review.Package.PackageName} — {review.Reason}");
     Console.WriteLine(
-        "System packages and profile-retained packages are never included in removals.");
+        "Only explicitly audited candidates are included; all other system packages are retained.");
 }
 
 static JsonSerializerOptions JsonOptions() =>

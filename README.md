@@ -58,19 +58,27 @@ dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExpe
 ## Audited cleanup
 
 Cleanup is preview-only unless both `--apply` and `--yes` are supplied. The
-Lenovo profile preserves every system-image package, the Novolis shell,
-NordVPN, and VLC. It removes only the five non-system packages explicitly
-listed as audited candidates in `devices/lenovo-tab-m10-x605f/packages.json`.
-Unknown non-system packages remain in the review list.
+active Lenovo `Minimal` profile preserves Android framework components, the
+Novolis shell, NordVPN, VLC, WebView, keyboard, and network essentials. It
+removes only explicitly audited candidates. System-image candidates use
+`pm uninstall --user 0`, so the stock image remains available and recovery is
+possible with `cmd package install-existing --user 0 <package>`. Unknown
+packages remain retained or in the review list. When Android protects a
+system-image APK from ADB reads, the apply step records package/version/path
+recovery metadata instead of pretending an APK backup exists.
 
-Preview the current device policy:
+The former conservative profile remains available at
+`devices/lenovo-tab-m10-x605f/packages-clean.json`.
+
+Preview the active minimal device policy:
 
 ```powershell
 dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- cleanup --profile d:\novolis\novolis-mobile-experience\devices\lenovo-tab-m10-x605f\packages.json --serial HA1417X9 --output-directory d:\novolis\novolis-mobile-experience\artifacts\cleanup\preview
 ```
 
-Apply the reviewed cleanup. The command backs up each candidate APK and
-records before/after inventories before removing packages:
+Apply the reviewed cleanup. The command first sets and verifies the Novolis
+shell as HOME, backs up each candidate APK with SHA-256 evidence, and records
+before/after inventories before applying the package operations:
 
 ```powershell
 dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- cleanup --profile d:\novolis\novolis-mobile-experience\devices\lenovo-tab-m10-x605f\packages.json --serial HA1417X9 --output-directory d:\novolis\novolis-mobile-experience\artifacts\cleanup\lenovo-tab-m10-x605f --apply --yes
