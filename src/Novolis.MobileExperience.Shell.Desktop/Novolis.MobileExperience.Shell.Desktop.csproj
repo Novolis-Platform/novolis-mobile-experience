@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>Novolis.MobileExperience.Shell.Desktop</RootNamespace>
+    <AssemblyName>Novolis.MobileExperience.Shell.Desktop</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <Description>Windows visual prototype host for the Novolis Slate shell.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <LibraryReference Include="Novolis.Avalonia.GraphicalProfile" />
+    <ProjectReference Include="..\Novolis.MobileExperience.Shell\Novolis.MobileExperience.Shell.csproj" />
+  </ItemGroup>
+</Project>

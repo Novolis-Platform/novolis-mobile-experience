@@ -78,6 +78,10 @@ public sealed class AndroidApplicationCatalog : IApplicationCatalog
                 application.PackageName,
                 QualifyActivityName(application.PackageName, application.ActivityName)));
         intent.AddFlags(ActivityFlags.NewTask);
+        var packageManager = _context.PackageManager;
+        if (packageManager is null || intent.ResolveActivity(packageManager) is null)
+            return Task.FromResult(false);
+
         _context.StartActivity(intent);
         return Task.FromResult(true);
     }

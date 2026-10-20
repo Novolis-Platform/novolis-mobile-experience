@@ -16,8 +16,8 @@ The first slice is deliberately read-only on the device:
   application through the normal Android intent path;
 - the Device Control APK is a separate, network-free Android component
   reserved for maintenance and installation orchestration;
-- the shell requests no network permission and does not require a Google or
-  Lenovo account.
+- the shell requests network access only for its user-launched HTTPS browser
+  surface and does not require a Google or Lenovo account.
 
 ## Build
 
@@ -98,9 +98,10 @@ dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExpe
 
 ## Approved Novolis updates
 
-Release checks run on the Windows provisioning host. The Android shell has no
-network permission and does not contact GitHub. The default is the privacy
-preserving local-mirror policy:
+Release checks run on the Windows provisioning host. The Android shell does not
+contact GitHub or run an update worker; its network permission is limited to
+the user-launched browser surface. The default is the privacy-preserving
+local-mirror policy:
 
 ```powershell
 dotnet run --project d:\novolis\novolis-mobile-experience\src\Novolis.MobileExperience.Provisioning\Novolis.MobileExperience.Provisioning.csproj -p:NovolisUseProjectReferences=true -- updates check --serial HA1417X9 --catalog-directory d:\novolis\novolis-mobile-experience\catalog --output-directory d:\novolis\novolis-mobile-experience\artifacts\updates\lenovo-tab-m10-x605f
@@ -159,14 +160,15 @@ with the same script and `-Unregister`.
 
 NordVPN is handled as a separately trusted vendor application. The official
 NordVPN sideload endpoint currently serves version `6.7.3+sideload`; the
-tablet's installed APK has the same package, version, SHA-256
-(`2784D46A3827A5C21FCB92C3ECF1A2FBCB71EC4D00529FDAACD646BDD341CAD9`), and
-vendor signing certificate
-(`BC64AE0725AF656B3B10B684CD1DF4C9D6B7F81BC5DC32DF3A3B2CE94CE61466`) as
-that official download. NordVPN's release notes advertise a newer Play
-distribution, but this profile does not introduce Google Play or install a
-third-party mirror. The next safe update is therefore blocked until Nord
-publishes the newer build through its official sideload channel.
+tablet's installed APK is the newer `9.14.1+sideload` build with SHA-256
+(`820EC9E0F930504893AA46D4FBE84EDC5A2A7C6617809A284BB2B3163EC7AE4E`) and
+the same vendor signing certificate
+(`BC64AE0725AF656B3B10B684CD1DF4C9D6B7F81BC5DC32DF3A3B2CE94CE61466`).
+NordVPN's release notes advertise a newer Play distribution, but this profile
+does not introduce Google Play or install a third-party mirror. The official
+sideload endpoint must not be used here until it publishes a build newer than
+the installed version; installing its current `6.7.3+sideload` would be a
+downgrade.
 
 ## Scope boundaries
 
@@ -174,3 +176,34 @@ This repository is an application composition root. It does not publish
 NuGet packages. Reusable Android host capabilities remain in existing
 Novolis libraries, while device policy, provisioning profiles, recovery, and
 the shell stay here.
+
+## Integrated tablet tools
+
+The shell owns the first-party tablet tools as capabilities rather than
+launching a separate application for each one:
+
+- **Private browser** — opens a shell-owned Android WebView session. Hostnames
+  are upgraded to HTTPS, while cookies and WebView storage are available only
+  for the active session so OAuth and sign-in flows can work. Downloads,
+  local-file access, and URL history remain disabled; cache, forms, cookies,
+  web storage, and navigation history are cleared when the session closes. The
+  activity also registers as the device's HTTP(S) browser handler, allowing
+  vendor sign-in flows such as NordVPN's to discover and launch it.
+- **Files** — opens Android's Storage Access Framework for one file or one
+  user-selected folder. The shell does not request broad storage access, keep
+  recent paths, or retain a folder grant. Android's picker is the supported
+  permission boundary on the target API 28 tablet; a normal application
+  cannot silently obtain unrestricted storage. The Android picker may render
+  its own system-level locations or recents; those are not collected or
+  retained by the shell.
+- **Bluetooth** — exposes paired devices and one foreground discovery pass.
+  Runtime permissions are requested only when the user starts discovery.
+  Pairing and adapter changes remain in Android's system settings flow.
+- **System** — shows the observed privacy and capability boundary so requested
+  policy is not confused with enforcement.
+
+The Android manifest contains only the permissions needed for these explicit
+actions: network access for the browser, the Android 9 location permission
+needed for legacy Bluetooth discovery, and the Android 12 nearby-device
+permissions for newer builds. No background Bluetooth scan or file-history
+worker is installed.

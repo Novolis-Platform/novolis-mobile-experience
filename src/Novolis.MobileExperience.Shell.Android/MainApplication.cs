@@ -1,5 +1,7 @@
 using Android.App;
+using Android.OS;
 using Android.Runtime;
+using Android.Webkit;
 using Avalonia;
 using Avalonia.Android;
 using Novolis.MobileExperience.Shell;
@@ -16,6 +18,9 @@ public sealed class MainApplication : AvaloniaAndroidApplication<App>
 
     public override void OnCreate()
     {
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.P)
+            WebView.SetDataDirectorySuffix("novolis-private");
+
         App.ApplicationCatalog = new AndroidApplicationCatalog(this);
         base.OnCreate();
     }

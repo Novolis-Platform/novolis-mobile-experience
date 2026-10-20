@@ -23,4 +23,58 @@ namespace Novolis.MobileExperience.Shell.Android;
         | ConfigChanges.Density)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    private bool _initialResumeCompleted;
+    private bool _wasBackgrounded;
+    private AndroidMobileExperienceServices? _services;
+
+    /// <inheritdoc />
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        _services = new AndroidMobileExperienceServices(this);
+        App.ExperienceServices = _services;
+        base.OnCreate(savedInstanceState);
+        App.ConfigureExperienceServices(_services);
+    }
+
+    /// <inheritdoc />
+    protected override void OnResume()
+    {
+        base.OnResume();
+        if (_wasBackgrounded)
+        {
+            App.NotifySystemHomePressed();
+        }
+
+        _initialResumeCompleted = true;
+    }
+
+    /// <inheritdoc />
+    protected override void OnPause()
+    {
+        if (_initialResumeCompleted)
+        {
+            _wasBackgrounded = true;
+        }
+
+        base.OnPause();
+    }
+
+    /// <inheritdoc />
+    protected override void OnDestroy()
+    {
+        _services?.Dispose();
+        _services = null;
+        base.OnDestroy();
+    }
+
+    /// <inheritdoc />
+    protected override void OnNewIntent(Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        if (intent?.Action == Intent.ActionMain
+            && intent.Categories?.Contains(Intent.CategoryHome) == true)
+        {
+            App.NotifySystemHomePressed();
+        }
+    }
 }

@@ -1,38 +1,64 @@
+#if false
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Novolis.Avalonia.GraphicalProfile;
+using Novolis.Avalonia.Slate;
+using Novolis.Markup.Slate;
+using Profile = Novolis.Avalonia.GraphicalProfile.GraphicalProfile;
 
 namespace Novolis.MobileExperience.Shell;
 
-/// <summary>Initial tablet-oriented shell surface and application launcher.</summary>
+/// <summary>Slate-based tablet shell and host-owned Android application launcher.</summary>
 public sealed class ShellView : UserControl
 {
+    private static readonly IReadOnlyList<SlateNavigationItem> NavigationItems =
+    [
+        new(SlateRoute.Home, "home", "⌂"),
+        new(SlateRoute.Apps, "apps", "▦"),
+        new(SlateRoute.System, "system", "⚙"),
+        new(SlateRoute.Terminal, "terminal", "⌘"),
+    ];
+
     private readonly IApplicationCatalog _catalog;
-    private readonly StackPanel _applicationList = new();
+    private readonly SlateShell _slateShell = new();
+    private readonly SlateAppCatalog _novolisApplications = new();
+    private readonly SlateAppCatalog _otherApplications = new();
+    private readonly SlateSystemMonitorPanel _systemMonitors = new();
+    private readonly SlateTerminalSurface _terminal = new();
     private readonly TextBlock _status = new();
     private readonly Button _refreshButton;
+    private IReadOnlyList<MobileApplicationEntry> _applications = [];
+    private IReadOnlyList<MobileApplicationEntry> _launchableApplications = [];
     private bool _hasLoaded;
 
-    /// <summary>Creates a shell backed by a platform application catalog.</summary>
+    /// <summary>Creates a Slate shell backed by a platform application catalog.</summary>
     public ShellView(IApplicationCatalog catalog)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-        _refreshButton = CreateButton(
-            "Refresh applications",
-            "primary-button",
-            "Refresh the installed Android application list");
-        _refreshButton.Click += (_, _) => _ = RefreshApplicationsAsync();
+        _refreshButton = CreateRefreshButton();
 
         _status.Text = "Ready to inspect installed applications.";
         _status.Classes.Add("body-copy");
         GraphicalProfileBinding.Bind(
             _status,
             TextBlock.ForegroundProperty,
-            GraphicalProfile.MutedResourceKey);
+            Profile.MutedResourceKey);
 
-        Content = BuildContent();
+        _slateShell.Items = NavigationItems;
+        _slateShell.RouteRequested += (_, request) => NavigateTo(request.Route);
+        _novolisApplications.AppSelected += (_, application) =>
+            _ = LaunchApplicationAsync(application);
+        _otherApplications.AppSelected += (_, application) =>
+            _ = LaunchApplicationAsync(application);
+        _systemMonitors.ActionRequested += (_, monitor) =>
+            _status.Text = $"{monitor.Label} is read-only in this shell.";
+
+        Content = _slateShell;
+        NavigateTo(SlateRoute.Home);
         AttachedToVisualTree += OnAttachedToVisualTree;
     }
 
@@ -45,104 +71,179 @@ public sealed class ShellView : UserControl
         _ = RefreshApplicationsAsync();
     }
 
-    private Control BuildContent()
+    private void NavigateTo(SlateRoute route)
     {
-        var root = new Border
+        _slateShell.SelectedRoute = route;
+        _slateShell.Body = route switch
         {
-            Padding = new Thickness(24),
-            Child = new ScrollViewer
-            {
-                Content = new StackPanel
-                {
-                    Spacing = 18,
-                    Children =
-                    {
-                        BuildHeader(),
-                        BuildStatusCard(),
-                        new TextBlock
-                        {
-                            Text = "Installed applications",
-                            Classes = { "page-title" },
-                        },
-                        _applicationList,
-                    },
-                },
-            },
+            SlateRoute.Home => BuildHomeBody(),
+            SlateRoute.Apps => BuildApplicationsBody(),
+            SlateRoute.System => BuildSystemBody(),
+            SlateRoute.Terminal => BuildTerminalBody(),
+            _ => BuildHomeBody(),
         };
-        GraphicalProfileBinding.Bind(
-            root,
-            Border.BackgroundProperty,
-            GraphicalProfile.BackgroundResourceKey);
-        return root;
     }
 
-    private Control BuildHeader()
+    private Control BuildHomeBody()
     {
-        var header = new Grid
+        var tiles = new SlateTileBoard
         {
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto"),
-            ColumnSpacing = 18,
-            RowSpacing = 6,
+            Items =
+            [
+                new SlateTileItem(
+                    "apps",
+                    "APPLICATIONS",
+                    $"{_launchableApplications.Count} ready · Novolis first",
+                    SlateRoute.Apps,
+                    SlateTileTone.Primary,
+                    2),
+                new SlateTileItem(
+                    "system",
+                    "SYSTEM",
+                    "Read-only privacy and device status",
+                    SlateRoute.System,
+                    SlateTileTone.Information),
+                new SlateTileItem(
+                    "terminal",
+                    "MAINTENANCE",
+                    "Read-only local diagnostics",
+                    SlateRoute.Terminal,
+                    SlateTileTone.Neutral),
+            ],
         };
+        tiles.TileInvoked += (_, tile) => NavigateTo(tile.TargetRoute);
 
-        var eyebrow = new TextBlock
+        var content = new StackPanel
         {
-            Text = "NOVOLIS MOBILE EXPERIENCE",
-            Classes = { "eyebrow" },
-        };
-        Grid.SetRow(eyebrow, 0);
-        Grid.SetColumn(eyebrow, 0);
-        header.Children.Add(eyebrow);
-
-        var title = new TextBlock
-        {
-            Text = "A calm home for approved Android tools",
-            Classes = { "page-title" },
-            TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-        };
-        Grid.SetRow(title, 1);
-        Grid.SetColumn(title, 0);
-        header.Children.Add(title);
-
-        _refreshButton.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetRowSpan(_refreshButton, 3);
-        Grid.SetColumn(_refreshButton, 1);
-        header.Children.Add(_refreshButton);
-
-        var subtitle = new TextBlock
-        {
-            Text = "The first slice reads PackageManager and launches existing applications. Network and installation policy stay explicit.",
-            Classes = { "body-copy" },
-            TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-        };
-        Grid.SetRow(subtitle, 2);
-        Grid.SetColumn(subtitle, 0);
-        header.Children.Add(subtitle);
-
-        return header;
-    }
-
-    private Control BuildStatusCard()
-    {
-        var card = new Border
-        {
-            Classes = { "ngp-card" },
-            Child = new StackPanel
+            Margin = new Thickness(20),
+            Spacing = 16,
+            Children =
             {
-                Spacing = 5,
-                Children =
+                new SlatePageHeader
                 {
-                    new TextBlock
-                    {
-                        Text = "SESSION STATUS",
-                        Classes = { "eyebrow" },
-                    },
-                    _status,
+                    Title = "Your Novolis tablet",
+                    Eyebrow = "MOBILE EXPERIENCE · LOCAL FIRST",
                 },
+                BuildStatusCard(),
+                tiles,
+                CreateReadOnlyNote(
+                    "Novolis is the primary surface. Android remains the compatibility layer beneath it."),
             },
         };
-        return card;
+        return CreateScrollViewer(content);
+    }
+
+    private Control BuildApplicationsBody()
+    {
+        var content = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 16,
+            Children =
+            {
+                new SlatePageHeader
+                {
+                    Title = "Applications",
+                    Eyebrow = "NOVOLIS FIRST · DISPLAY NAME ASCENDING",
+                },
+                BuildStatusCard(),
+                BuildApplicationSection(
+                    "NOVOLIS",
+                    "Novolis applications are presented first.",
+                    _novolisApplications,
+                    _launchableApplications.Count(application => application.IsNovolisApplication)),
+                BuildApplicationSection(
+                    "OTHER APPS",
+                    "Other installed Android applications remain available below.",
+                    _otherApplications,
+                    _launchableApplications.Count(application => !application.IsNovolisApplication)),
+            },
+        };
+        return CreateScrollViewer(content);
+    }
+
+    private Control BuildSystemBody()
+    {
+        _systemMonitors.Items = CreateSystemMonitors();
+        _systemMonitors.MinHeight = 420;
+
+        var content = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 16,
+            Children =
+            {
+                new SlatePageHeader
+                {
+                    Title = "System status",
+                    Eyebrow = "READ-ONLY · HOST AND DEVICE BOUNDARIES",
+                },
+                BuildStatusCard(),
+                _systemMonitors,
+                CreateReadOnlyNote(
+                    "Provisioning and package policy remain outside the visual shell."),
+            },
+        };
+        return CreateScrollViewer(content);
+    }
+
+    private Control BuildTerminalBody()
+    {
+        _terminal.Lines = CreateTerminalLines();
+
+        var content = new StackPanel
+        {
+            Margin = new Thickness(20),
+            Spacing = 16,
+            Children =
+            {
+                new SlatePageHeader
+                {
+                    Title = "Maintenance",
+                    Eyebrow = "LOCAL TRANSCRIPT · COMMAND INPUT DISABLED",
+                },
+                BuildStatusCard(),
+                _terminal,
+            },
+        };
+        return CreateScrollViewer(content);
+    }
+
+    private Control BuildApplicationSection(
+        string title,
+        string subtitle,
+        SlateAppCatalog catalog,
+        int count)
+    {
+        var heading = new StackPanel
+        {
+            Spacing = 4,
+            Children =
+            {
+                CreateSectionLabel($"{title} · {count} READY"),
+                CreateMutedText(subtitle),
+            },
+        };
+
+        Control applicationSurface = count == 0
+            ? CreateEmptyCatalogMessage(
+                title == "NOVOLIS"
+                    ? "No Novolis applications were reported."
+                    : "No other launchable applications were reported.")
+            : catalog;
+
+        if (count > 0)
+        {
+            catalog.Height = Math.Max(
+                156,
+                Math.Ceiling(count / 2d) * 156 + 8);
+        }
+
+        return new StackPanel
+        {
+            Spacing = 10,
+            Children = { heading, applicationSurface },
+        };
     }
 
     private async Task RefreshApplicationsAsync()
@@ -154,29 +255,33 @@ public sealed class ShellView : UserControl
         _status.Text = "Reading launchable applications…";
         try
         {
-            var applications = await _catalog.DiscoverAsync().ConfigureAwait(true);
-            _applicationList.Children.Clear();
-            if (applications.Count == 0)
-            {
-                _applicationList.Children.Add(
-                    CreateMessageCard(
-                        "No launchable applications were reported by Android PackageManager."));
-                _status.Text = "PackageManager returned no launcher activities.";
-                return;
-            }
+            _applications = await _catalog.DiscoverAsync().ConfigureAwait(true);
+            _launchableApplications = _applications
+                .Where(application => !application.IsHomeApplication)
+                .ToArray();
 
-            foreach (var application in applications)
-                _applicationList.Children.Add(CreateApplicationCard(application));
+            _novolisApplications.Apps = _launchableApplications
+                .Where(application => application.IsNovolisApplication)
+                .Select(ToSlateDescriptor)
+                .ToArray();
+            _otherApplications.Apps = _launchableApplications
+                .Where(application => !application.IsNovolisApplication)
+                .Select(ToSlateDescriptor)
+                .ToArray();
 
-            _status.Text =
-                $"PackageManager reported {applications.Count} launchable application activities.";
+            _status.Text = _launchableApplications.Count == 0
+                ? "PackageManager returned no launchable applications."
+                : $"{_launchableApplications.Count} launchable applications ready.";
+            NavigateTo(_slateShell.SelectedRoute);
         }
         catch (Exception ex)
         {
-            _applicationList.Children.Clear();
-            _applicationList.Children.Add(
-                CreateMessageCard($"Application discovery failed: {ex.Message}"));
-            _status.Text = "The shell remains available; discovery can be retried.";
+            _applications = [];
+            _launchableApplications = [];
+            _novolisApplications.Apps = [];
+            _otherApplications.Apps = [];
+            _status.Text = $"Discovery failed; retry is available: {ex.Message}";
+            NavigateTo(_slateShell.SelectedRoute);
         }
         finally
         {
@@ -184,96 +289,242 @@ public sealed class ShellView : UserControl
         }
     }
 
-    private Control CreateApplicationCard(MobileApplicationEntry application)
+    private async Task LaunchApplicationAsync(SlateAppDescriptor descriptor)
     {
-        var details = new StackPanel
+        var application = _launchableApplications.FirstOrDefault(
+            candidate => string.Equals(
+                candidate.PackageName,
+                descriptor.Id,
+                StringComparison.Ordinal));
+        if (application is null || !application.CanOpen)
         {
-            Spacing = 4,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = application.DisplayName,
-                    Classes = { "body-copy" },
-                    FontWeight = global::Avalonia.Media.FontWeight.Bold,
-                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                },
-                new TextBlock
-                {
-                    Text = application.PackageName,
-                    Classes = { "body-copy" },
-                    TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                },
-            },
-        };
-
-        var row = new DockPanel
-        {
-            LastChildFill = true,
-        };
-        if (application.CanOpen)
-        {
-            var launchButton = CreateButton(
-                "Open",
-                "action-button",
-                $"Open {application.DisplayName}");
-            launchButton.Click += async (_, _) =>
-            {
-                launchButton.IsEnabled = false;
-                try
-                {
-                    var launched = await _catalog.LaunchAsync(application)
-                        .ConfigureAwait(true);
-                    _status.Text = launched
-                        ? $"Opened {application.DisplayName}."
-                        : $"Android declined the launch request for {application.DisplayName}.";
-                }
-                catch (Exception ex)
-                {
-                    _status.Text = $"Could not open {application.DisplayName}: {ex.Message}";
-                }
-                finally
-                {
-                    launchButton.IsEnabled = true;
-                }
-            };
-            DockPanel.SetDock(launchButton, Dock.Right);
-            row.Children.Add(launchButton);
+            _status.Text = $"{descriptor.Name} is not available to open.";
+            return;
         }
-        row.Children.Add(details);
 
-        return new Border
+        _status.Text = $"Opening {descriptor.Name}…";
+        try
         {
-            Classes = { "ngp-card" },
-            Child = row,
-        };
+            var launched = await _catalog.LaunchAsync(application)
+                .ConfigureAwait(true);
+            _status.Text = launched
+                ? $"Opened {descriptor.Name}."
+                : $"Android declined the launch request for {descriptor.Name}.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = $"Could not open {descriptor.Name}: {ex.Message}";
+        }
     }
 
-    private static Control CreateMessageCard(string message) =>
-        new Border
+    private IReadOnlyList<SlateMonitorItem> CreateSystemMonitors() =>
+    [
+        new(
+            "network",
+            "Update network",
+            "Host-managed",
+            "The shell has no network permission.",
+            SlateMonitorSeverity.Healthy),
+        new(
+            "accounts",
+            "Accounts",
+            "Not queried",
+            "Use the provisioning audit for device account state.",
+            SlateMonitorSeverity.Neutral),
+        new(
+            "home",
+            "Home surface",
+            "Novolis",
+            "This application owns the HOME activity.",
+            SlateMonitorSeverity.Healthy),
+        new(
+            "applications",
+            "Applications",
+            _launchableApplications.Count.ToString(),
+            "Launchable entries, sorted by display name.",
+            SlateMonitorSeverity.Neutral),
+    ];
+
+    private IReadOnlyList<SlateTerminalLine> CreateTerminalLines() =>
+    [
+        new("nme> system info", SlateTerminalLineKind.Prompt),
+        new(
+            "PRODUCT  Novolis Mobile Experience\n"
+            + "UX       Slate\n"
+            + "MODE     Offline first\n"
+            + $"APPS     {_launchableApplications.Count} launchable entries",
+            SlateTerminalLineKind.Output),
+        new(
+            "COMMAND INPUT DISABLED · HOST MAINTENANCE ONLY",
+            SlateTerminalLineKind.Muted),
+    ];
+
+    private static SlateAppDescriptor ToSlateDescriptor(
+        MobileApplicationEntry application) =>
+        new(
+            application.PackageName,
+            application.DisplayName,
+            application.IsNovolisApplication ? "Novolis" : "Android",
+            SlateApplicationState.Installed,
+            application.PackageName,
+            application.IsNovolisApplication ? "▣" : "●");
+
+    private Control BuildStatusCard()
+    {
+        var layout = new Grid
         {
-            Classes = { "ngp-card" },
-            Child = new TextBlock
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 12,
+            Children =
             {
-                Text = message,
-                Classes = { "body-copy" },
-                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                new StackPanel
+                {
+                    Spacing = 4,
+                    Children =
+                    {
+                        CreateSectionLabel("SESSION STATUS"),
+                        _status,
+                    },
+                },
+                _refreshButton,
             },
         };
+        Grid.SetColumn(_refreshButton, 1);
+        _refreshButton.VerticalAlignment = VerticalAlignment.Center;
 
-    private static Button CreateButton(
-        string label,
-        string className,
-        string description)
+        var card = new Border
+        {
+            Padding = new Thickness(16),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Child = layout,
+        };
+        GraphicalProfileBinding.Bind(
+            card,
+            Border.BackgroundProperty,
+            Profile.RaisedResourceKey);
+        GraphicalProfileBinding.Bind(
+            card,
+            Border.BorderBrushProperty,
+            Profile.BorderResourceKey);
+        return card;
+    }
+
+    private static ScrollViewer CreateScrollViewer(Control content) =>
+        new()
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = content,
+        };
+
+    private static TextBlock CreateSectionLabel(string text)
+    {
+        var label = new TextBlock
+        {
+            Text = text,
+            FontWeight = FontWeight.Bold,
+            FontSize = 12,
+        };
+        GraphicalProfileBinding.Bind(
+            label,
+            TextBlock.ForegroundProperty,
+            Profile.MutedResourceKey);
+        return label;
+    }
+
+    private static TextBlock CreateMutedText(string text)
+    {
+        var label = new TextBlock
+        {
+            Text = text,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+        };
+        GraphicalProfileBinding.Bind(
+            label,
+            TextBlock.ForegroundProperty,
+            Profile.MutedResourceKey);
+        return label;
+    }
+
+    private static Control CreateReadOnlyNote(string text)
+    {
+        var note = new Border
+        {
+            Padding = new Thickness(14),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Child = CreateMutedText(text),
+        };
+        GraphicalProfileBinding.Bind(
+            note,
+            Border.BackgroundProperty,
+            Profile.SurfaceResourceKey);
+        GraphicalProfileBinding.Bind(
+            note,
+            Border.BorderBrushProperty,
+            Profile.BorderResourceKey);
+        return note;
+    }
+
+    private static Control CreateEmptyCatalogMessage(string text)
+    {
+        var card = new Border
+        {
+            MinHeight = 100,
+            Padding = new Thickness(16),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Child = CreateMutedText(text),
+        };
+        GraphicalProfileBinding.Bind(
+            card,
+            Border.BackgroundProperty,
+            Profile.RaisedResourceKey);
+        GraphicalProfileBinding.Bind(
+            card,
+            Border.BorderBrushProperty,
+            Profile.BorderResourceKey);
+        return card;
+    }
+
+    private Button CreateRefreshButton()
     {
         var button = new Button
         {
-            Content = label,
-            MinWidth = 140,
+            Content = "REFRESH",
+            MinWidth = 112,
+            MinHeight = 48,
+            Padding = new Thickness(13, 8),
+            FontWeight = FontWeight.Bold,
         };
-        button.Classes.Add(className);
-        ToolTip.SetTip(button, description);
-        AutomationProperties.SetName(button, description);
+        button.Click += (_, _) => _ = RefreshApplicationsAsync();
+        ToolTip.SetTip(button, "Refresh installed Android applications");
+        AutomationProperties.SetName(
+            button,
+            "Refresh installed Android applications");
+        GraphicalProfileBinding.Bind(
+            button,
+            Button.BackgroundProperty,
+            Profile.AccentFillResourceKey);
+        GraphicalProfileBinding.Bind(
+            button,
+            Button.ForegroundProperty,
+            Profile.OnAccentFillResourceKey);
         return button;
+    }
+}
+#endif
+
+namespace Novolis.MobileExperience.Shell;
+
+/// <summary>Compatibility name for hosts that still construct ShellView.</summary>
+public sealed class ShellView : SlateExperienceView
+{
+    /// <summary>Creates the current Slate experience view.</summary>
+    public ShellView(IApplicationCatalog catalog)
+        : base(catalog)
+    {
     }
 }

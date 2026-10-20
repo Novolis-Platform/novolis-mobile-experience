@@ -32,10 +32,16 @@ public sealed class ShellCatalogTests
             ActivityName = ".MainActivity",
             IsHomeApplication = true,
         };
-        var application = home with { IsHomeApplication = false };
+        var application = home with
+        {
+            IsHomeApplication = false,
+            PackageName = "org.videolan.vlc",
+        };
 
         await Assert.That(home.CanOpen).IsFalse();
         await Assert.That(application.CanOpen).IsTrue();
+        await Assert.That(home.IsNovolisApplication).IsTrue();
+        await Assert.That(application.IsNovolisApplication).IsFalse();
     }
 
     [Test]
